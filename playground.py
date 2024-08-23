@@ -50,6 +50,8 @@ conversation = Conversation()
 # define the default LLM and API key
 CHOSEN_LLM = available_llms["GroqModel"][0]
 API_KEY = available_llms["GroqModel"][1]
+TEMPERATURE = 0.7  # Default temperature
+MAX_TOKENS = 256  # Default max tokens
 
 
 # Define the callback function for the LLM component dropdown
@@ -69,11 +71,22 @@ def llm_model_callback(model):
 
 
 # Function to handle conversation
-def handle_conversation(llm_model, user_message, history):
+def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
     agent = SimpleConversationAgent(
-        llm=CHOSEN_LLM(name=llm_model, api_key=API_KEY), conversation=conversation
+        llm=CHOSEN_LLM(
+            name=llm_model,
+            api_key=API_KEY,
+        ),
+        conversation=conversation,
     )
-    response = agent.exec(user_message)
+    llm_kwargs = {
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    response = agent.exec(
+        user_message,
+        llm_kwargs=llm_kwargs,
+    )
     history.append((user_message, response))
     return history, "", history
 
@@ -87,6 +100,18 @@ with gr.Blocks() as interface:
                 label="LLM Component",
             )
             llm_model_dropdown = gr.Dropdown(choices=[], label="LLM Model")
+
+            temperature_slider = gr.Slider(
+                minimum=0.0,
+                maximum=1.0,
+                value=TEMPERATURE,
+                step=0.01,
+                label="Temperature",
+            )
+
+            max_tokens_slider = gr.Slider(
+                minimum=1, maximum=2048, value=MAX_TOKENS, step=1, label="Max Tokens"
+            )
 
             # Set up the event to update the model dropdown when LLM component changes
             llm_component_dropdown.change(
@@ -109,7 +134,13 @@ with gr.Blocks() as interface:
             # Update chat history based on user input
             user_input.submit(
                 fn=handle_conversation,
-                inputs=[llm_model_dropdown, user_input, chat_interface],
+                inputs=[
+                    llm_model_dropdown,
+                    user_input,
+                    chat_interface,
+                    temperature_slider,
+                    max_tokens_slider,
+                ],
                 outputs=[chat_interface, user_input, chat_interface],
                 scroll_to_output=True,  # This will scroll the chat interface to the bottom
             )
