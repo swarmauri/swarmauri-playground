@@ -20,11 +20,9 @@ from swarmauri.standard.agents.concrete.SimpleConversationAgent import (
 )
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 
-
 # Fetch the API keys from environment variables
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 
 available_llms = {
     "GroqModel": (GroqModel, GROQ_API_KEY),
@@ -47,9 +45,12 @@ llms = {
 # Initialize Conversation
 conversation = Conversation()
 
-# define the default LLM and API key
 CHOSEN_LLM = available_llms["GroqModel"][0]
 API_KEY = available_llms["GroqModel"][1]
+DEFAULT_AI = "GroqModel"
+DEFAULT_MODEL = llms["GroqModel"][0]
+TEMPERATURE = 0.7
+MAX_TOKENS = 512
 
 
 # Define the callback function for the LLM component dropdown
@@ -69,13 +70,30 @@ def llm_model_callback(model):
 
 
 # Function to handle conversation
-def handle_conversation(llm_model, user_message, history):
+def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
     agent = SimpleConversationAgent(
-        llm=CHOSEN_LLM(name=llm_model, api_key=API_KEY), conversation=conversation
+        llm=CHOSEN_LLM(
+            name=llm_model,
+            api_key=API_KEY,
+        ),
+        conversation=conversation,
     )
-    response = agent.exec(user_message)
+    llm_kwargs = {
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    response = agent.exec(
+        user_message,
+        llm_kwargs=llm_kwargs,
+    )
     history.append((user_message, response))
     return history, "", history
+
+
+# Define the function to update the code preview
+def update_code_preview():
+    with open(__file__, "r") as f:
+        return f.read()
 
 
 # Create the interface within a Blocks context
@@ -85,8 +103,25 @@ with gr.Blocks() as interface:
             llm_component_dropdown = gr.Dropdown(
                 choices=[model for model in available_llms.keys()],
                 label="LLM Component",
+                value=DEFAULT_AI,
             )
-            llm_model_dropdown = gr.Dropdown(choices=[], label="LLM Model")
+            llm_model_dropdown = gr.Dropdown(
+                choices=llms[DEFAULT_AI],
+                label="LLM Model",
+                value=DEFAULT_MODEL,
+            )
+
+            temperature_slider = gr.Slider(
+                minimum=0.0,
+                maximum=1.0,
+                value=TEMPERATURE,
+                step=0.01,
+                label="Temperature",
+            )
+
+            max_tokens_slider = gr.Slider(
+                minimum=1, maximum=2048, value=MAX_TOKENS, step=1, label="Max Tokens"
+            )
 
             # Set up the event to update the model dropdown when LLM component changes
             llm_component_dropdown.change(
@@ -109,9 +144,23 @@ with gr.Blocks() as interface:
             # Update chat history based on user input
             user_input.submit(
                 fn=handle_conversation,
-                inputs=[llm_model_dropdown, user_input, chat_interface],
+                inputs=[
+                    llm_model_dropdown,
+                    user_input,
+                    chat_interface,
+                    temperature_slider,
+                    max_tokens_slider,
+                ],
                 outputs=[chat_interface, user_input, chat_interface],
                 scroll_to_output=True,  # This will scroll the chat interface to the bottom
+            )
+
+        # Add a column for the code preview block
+        with gr.Column(scale=3):
+            code_preview = gr.Code(
+                language="python",
+                label="Code Preview",
+                value=update_code_preview(),
             )
 
 # Run the interface
