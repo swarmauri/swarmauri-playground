@@ -100,84 +100,15 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     return history, "", history
 
 
-# Define the function to update the code preview
-import ast
+# Start of the interface code block (non-essentials)
+from utilities.extract_code import extract_code
 
-
-def update_code_preview():
-    """
-    In this function, we read the current file and collect the relevant lines
-    until the specified comment is reached. We then parse the response with AST
-    and filter out the nodes based on the `to_be_ignored` set. Finally, we convert
-    the cleaned AST back to source code and return the cleaned code.
-    """
-    response_lines = []
-
-    # Read the current file and collect relevant lines
-    with open(__file__, "r", encoding="utf-8") as f:
-        documentation_start = False
-        first = True
-
-        for line in f:
-            stripped_line = line.strip()
-
-            # Check if the line starts or ends the documentation string
-            if first and '"""' in stripped_line:
-                documentation_start = not documentation_start
-                first = False
-                continue
-
-            if documentation_start and '"""' in stripped_line:
-                documentation_start = not documentation_start
-                continue
-
-            if documentation_start:
-                continue
-
-            # Stop collecting lines when reaching the specified comment
-            if stripped_line == "# Define the function to update the code preview":
-                break
-
-            # Collect the line
-            response_lines.append(line)
-
-    response = "".join(response_lines)
-
-    # Parse the response with AST
-    tree = ast.parse(response)
-
-    # Define the names of nodes to be ignored
-    to_be_ignored = {
-        "llm_model_callback",
-        "available_llms",
-        "llms",
-        "CHOSEN_LLM",
-    }
-
-    # Filter out nodes based on the `to_be_ignored` set
-    class CodeCleaner(ast.NodeTransformer):
-        def visit_FunctionDef(self, node):
-            if any(pattern in node.name for pattern in to_be_ignored):
-                return None
-            return node
-
-        def visit_Assign(self, node):
-            if any(
-                isinstance(target, ast.Name)
-                and any(pattern in target.id for pattern in to_be_ignored)
-                for target in node.targets
-            ):
-                return None
-            return node
-
-    # Transform the AST to remove ignored nodes
-    cleaned_tree = CodeCleaner().visit(tree)
-
-    # Convert the cleaned AST back to source code
-    cleaned_code = ast.unparse(cleaned_tree)
-
-    # Return the cleaned code
-    return cleaned_code
+to_be_ignored = {
+    "llm_model_callback",
+    "available_llms",
+    "llms",
+    "CHOSEN_LLM",
+}
 
 
 # Create the interface within a Blocks context
@@ -244,7 +175,11 @@ with gr.Blocks() as interface:
             code_preview = gr.Code(
                 language="python",
                 label="Code Preview",
-                value=update_code_preview(),
+                value=extract_code(
+                    start_documentation=False,
+                    file_name=__file__,
+                    to_be_ignored=to_be_ignored,
+                ),
             )
 
 # Run the interface
