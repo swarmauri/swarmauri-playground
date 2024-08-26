@@ -12,6 +12,7 @@ P.S: Follow the structure of the existing LLMs to add a new one.
 """
 
 import os
+from dotenv import load_dotenv
 import gradio as gr
 from swarmauri.standard.llms.concrete.GroqModel import GroqModel
 from swarmauri.standard.llms.concrete.OpenAIModel import OpenAIModel
@@ -20,15 +21,20 @@ from swarmauri.standard.agents.concrete.SimpleConversationAgent import (
 )
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 
+# Load the environment variables
+load_dotenv()
+
 # Fetch the API keys from environment variables
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Define the available LLMs
 available_llms = {
     "GroqModel": (GroqModel, GROQ_API_KEY),
     "OpenAIModel": (OpenAIModel, OPENAI_API_KEY),
 }
 
+# Define the allowed models for each LLM
 llms = {
     "GroqModel": [
         model
@@ -45,16 +51,19 @@ llms = {
 # Initialize Conversation
 conversation = Conversation()
 
+
+# Define the default values and global variables
 CHOSEN_LLM = available_llms["GroqModel"][0]
-API_KEY = available_llms["GroqModel"][1]
 DEFAULT_AI = "GroqModel"
 DEFAULT_MODEL = llms["GroqModel"][0]
+API_KEY = available_llms["GroqModel"][1]
 TEMPERATURE = 0.7
 MAX_TOKENS = 512
 
 
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
+    """Shows all the models available for the selected LLM component"""
     if llms.get(component, None) is not None:
         global CHOSEN_LLM
         global API_KEY
@@ -71,6 +80,7 @@ def llm_model_callback(model):
 
 # Function to handle conversation
 def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
+    """Main function which handles the conversation"""
     agent = SimpleConversationAgent(
         llm=CHOSEN_LLM(
             name=llm_model,
@@ -90,10 +100,15 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     return history, "", history
 
 
-# Define the function to update the code preview
-def update_code_preview():
-    with open(__file__, "r") as f:
-        return f.read()
+# Start of the interface code block (non-essentials)
+from utilities.extract_code import extract_code
+
+to_be_ignored = {
+    "llm_model_callback",
+    "available_llms",
+    "llms",
+    "CHOSEN_LLM",
+}
 
 
 # Create the interface within a Blocks context
@@ -160,10 +175,14 @@ with gr.Blocks() as interface:
             code_preview = gr.Code(
                 language="python",
                 label="Code Preview",
-                value=update_code_preview(),
+                value=extract_code(
+                    start_documentation=False,
+                    file_name=__file__,
+                    to_be_ignored=to_be_ignored,
+                ),
             )
 
 # Run the interface
 if __name__ == "__main__":
-    interface.title = "Swamuari Playground"
+    interface.title = "Swarmauri Playground"
     interface.launch()
