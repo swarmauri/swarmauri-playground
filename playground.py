@@ -100,15 +100,34 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     return history, "", history
 
 
-# Start of the interface code block (non-essentials)
-from utilities.extract_code import extract_code
+def code_preview():
+    return """
+from swarmauri.standard.llms.concrete.GroqModel import GroqModel as LLM
+from swarmauri.standard.conversations.concrete.Conversation import Conversation
 
-to_be_ignored = {
-    "llm_model_callback",
-    "available_llms",
-    "llms",
-    "CHOSEN_LLM",
+from swarmauri.standard.messages.concrete.AgentMessage import AgentMessage
+
+# model initialization
+API_KEY = os.getenv('GROQ_API_KEY')
+model = LLM(api_key = API_KEY, name='llama3-8b-8192')
+conversation = Conversation()
+
+# user input
+input_data = "Hello"
+human_message = HumanMessage(content=input_data)
+conversation.add_message(human_message)
+
+# prediction key word arguments
+llm_kwargs = {
+    "temperature": 0.7,
+    "max_tokens": 512,
 }
+
+# prediction
+model.predict(conversation=conversation, **llm_kwargs)
+prediction = conversation.get_last().content
+print(prediction)
+"""
 
 
 # Create the interface within a Blocks context
@@ -175,11 +194,7 @@ with gr.Blocks() as interface:
             code_preview = gr.Code(
                 language="python",
                 label="Code Preview",
-                value=extract_code(
-                    start_documentation=False,
-                    file_name=__file__,
-                    to_be_ignored=to_be_ignored,
-                ),
+                value=code_preview(),
             )
 
 # Run the interface
