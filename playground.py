@@ -109,7 +109,7 @@ from swarmauri.standard.messages.concrete.AgentMessage import AgentMessage
 
 # model initialization
 API_KEY = os.getenv('GROQ_API_KEY')
-model = LLM(api_key = API_KEY, name=llama3-8b-8192)
+model = LLM(api_key = API_KEY, name='llama3-8b-8192')
 conversation = Conversation()
 
 # user input
