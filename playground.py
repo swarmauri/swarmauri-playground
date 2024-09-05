@@ -88,34 +88,31 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     return history, "", history
 
 
- # Define the function to update the code preview with the correct snippet
-def update_code_preview():
-    llm_component = llm_component_dropdown.value
-    llm_model = llm_model_dropdown.value
+# Define the function to update the code preview with the correct snippet
+def update_code_preview(component, model):
     api_key_mapping = {
         "GroqModel": "GROQ_API_KEY",
         "OpenAIModel": "OPENAI_API_KEY",
     }
     code_snippet = f"""
-from swarmauri.standard.llms.concrete.{llm_component} import {llm_component} as LLM
+from swarmauri.standard.llms.concrete.{component} import {component} as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
-import os
 
 # model initialization
-API_KEY = os.getenv('{api_key_mapping.get(llm_component, None)}')
-model = LLM(api_key=API_KEY, name='{llm_model}')
+API_KEY = os.getenv('{api_key_mapping.get(component, None)}')
+model = LLM(api_key=API_KEY, name='{model}')
 conversation = Conversation()
 
 # user input
-input_data = "Hi there!"
+input_data = "Hello"
 human_message = HumanMessage(content=input_data)
 conversation.add_message(human_message)
 
 # prediction key word arguments
 llm_kwargs = {{
-    "temperature": {temperature_slider.value},
-    "max_tokens": {max_tokens_slider.value},
+    "temperature": 0.7,
+    "max_tokens": 512,
 }}
 
 # prediction
@@ -123,9 +120,7 @@ model.predict(conversation=conversation, **llm_kwargs)
 prediction = conversation.get_last().content
 print(prediction)
 """
-        
     return code_snippet
-
 
 
 # Create the interface within a Blocks context
@@ -192,7 +187,20 @@ with gr.Blocks() as interface:
             code_preview = gr.Code(
                 language="python",
                 label="Code Preview",
-                value=update_code_preview(),
+                value=update_code_preview(DEFAULT_AI, DEFAULT_MODEL),
+            )
+
+            # Set up the event to update the code preview when LLM component or model changes
+            llm_component_dropdown.change(
+                fn=lambda component: update_code_preview(component, llm_model_dropdown.value),
+                inputs=llm_component_dropdown,
+                outputs=code_preview,
+            )
+
+            llm_model_dropdown.change(
+                fn=lambda model: update_code_preview(llm_component_dropdown.value, model),
+                inputs=llm_model_dropdown,
+                outputs=code_preview,
             )
 
 # Run the interface
