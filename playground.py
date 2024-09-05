@@ -89,15 +89,19 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
 
 
 # Define the function to update the code preview with the correct snippet
-def update_code_preview():
-    code_snippet = """
-from swarmauri.standard.llms.concrete.GroqModel import GroqModel as LLM
+def update_code_preview(component, model):
+    api_key_mapping = {
+        "GroqModel": "GROQ_API_KEY",
+        "OpenAIModel": "OPENAI_API_KEY",
+    }
+    code_snippet = f"""
+from swarmauri.standard.llms.concrete.{component} import {component} as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
 
 # model initialization
-API_KEY = os.getenv('GROQ_API_KEY')
-model = LLM(api_key=API_KEY, name='llama3-8b-8192')
+API_KEY = os.getenv('{api_key_mapping.get(component, None)}')
+model = LLM(api_key=API_KEY, name='{model}')
 conversation = Conversation()
 
 # user input
@@ -106,10 +110,10 @@ human_message = HumanMessage(content=input_data)
 conversation.add_message(human_message)
 
 # prediction key word arguments
-llm_kwargs = {
+llm_kwargs = {{
     "temperature": 0.7,
     "max_tokens": 512,
-}
+}}
 
 # prediction
 model.predict(conversation=conversation, **llm_kwargs)
@@ -183,7 +187,20 @@ with gr.Blocks() as interface:
             code_preview = gr.Code(
                 language="python",
                 label="Code Preview",
-                value=update_code_preview(),
+                value=update_code_preview(DEFAULT_AI, DEFAULT_MODEL),
+            )
+
+            # Set up the event to update the code preview when LLM component or model changes
+            llm_component_dropdown.change(
+                fn=lambda component: update_code_preview(component, llm_model_dropdown.value),
+                inputs=llm_component_dropdown,
+                outputs=code_preview,
+            )
+
+            llm_model_dropdown.change(
+                fn=lambda model: update_code_preview(llm_component_dropdown.value, model),
+                inputs=llm_model_dropdown,
+                outputs=code_preview,
             )
 
 # Run the interface
