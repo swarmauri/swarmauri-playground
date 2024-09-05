@@ -90,8 +90,9 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
 
 # Define the function to update the code preview with the correct snippet
 def update_code_preview():
+    llm_component = llm_component_dropdown.value
     llm_model = llm_model_dropdown.value
-    if llm_model == "OpenAIModel":
+    if llm_component == "OpenAIModel":
         code_snippet = f"""
 from swarmauri.standard.llms.concrete.OpenAIModel import OpenAIModel as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
@@ -99,7 +100,7 @@ from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
 
 # model initialization
 API_KEY = os.getenv('GROQ_API_KEY')
-model = LLM(api_key=API_KEY, name='{llm_model}')
+model = LLM(api_key=API_KEY, name=llm_model)
 conversation = Conversation()
 
 # user input
@@ -206,7 +207,7 @@ with gr.Blocks() as interface:
                     max_tokens_slider,
                 ],
                 outputs=[chat_interface, user_input, chat_interface],
-                scroll_to_output=True,  # This will scroll the chat interface to the bottom
+                scroll_to_output=True,
             )
 
         # Add a column for the code preview block
