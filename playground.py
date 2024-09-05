@@ -34,7 +34,9 @@ llms = {
     ],
     "OpenAIModel": [
         model
-        for model in OpenAIModel(api_key=available_llms["OpenAIModel"][1]).allowed_models
+        for model in OpenAIModel(
+            api_key=available_llms["OpenAIModel"][1]
+        ).allowed_models
     ],
 }
 
@@ -48,19 +50,22 @@ DEFAULT_MODEL = llms["GroqModel"][0]
 TEMPERATURE = 0.7
 MAX_TOKENS = 512
 
+
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
-    if component in llms:
+    if llms.get(component, None) is not None:
         global CHOSEN_LLM
         global API_KEY
         CHOSEN_LLM = available_llms[component][0]
         API_KEY = available_llms[component][1]
-        return gr.update(choices=llms[component])
+        return gr.update(choices=[model for model in llms[component]])
     return gr.update(choices=[])
+
 
 # Define the callback function for the LLM model dropdown
 def llm_model_callback(model):
     return f"Agent created with {model}"
+
 
 # Function to handle conversation
 def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
@@ -82,7 +87,8 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     history.append((user_message, response))
     return history, "", history
 
-# Define the function to update the code preview with the correct snippet
+
+ # Define the function to update the code preview with the correct snippet
 def update_code_preview():
     llm_component = llm_component_dropdown.value
     llm_model = llm_model_dropdown.value
@@ -120,12 +126,14 @@ print(prediction)
         
     return code_snippet
 
+
+
 # Create the interface within a Blocks context
 with gr.Blocks() as interface:
     with gr.Row():
         with gr.Column(scale=1):
             llm_component_dropdown = gr.Dropdown(
-                choices=list(available_llms.keys()),
+                choices=[model for model in available_llms.keys()],
                 label="LLM Component",
                 value=DEFAULT_AI,
             )
@@ -147,13 +155,17 @@ with gr.Blocks() as interface:
                 minimum=1, maximum=2048, value=MAX_TOKENS, step=1, label="Max Tokens"
             )
 
-            output_text = gr.Textbox(label="Output")
-
             # Set up the event to update the model dropdown when LLM component changes
             llm_component_dropdown.change(
                 fn=llm_component_callback,
                 inputs=llm_component_dropdown,
                 outputs=llm_model_dropdown,
+            )
+
+            output_text = gr.Textbox(label="Output")
+
+            llm_model_dropdown.change(
+                fn=llm_model_callback, inputs=llm_model_dropdown, outputs=output_text
             )
 
         with gr.Column(scale=4):
@@ -172,7 +184,7 @@ with gr.Blocks() as interface:
                     max_tokens_slider,
                 ],
                 outputs=[chat_interface, user_input, chat_interface],
-                scroll_to_output=True,
+                scroll_to_output=True,  # This will scroll the chat interface to the bottom
             )
 
         # Add a column for the code preview block
@@ -181,20 +193,6 @@ with gr.Blocks() as interface:
                 language="python",
                 label="Code Preview",
                 value=update_code_preview(),
-            )
-
-            # Update code preview when the LLM component changes
-            llm_component_dropdown.change(
-                fn=update_code_preview,
-                inputs=[],
-                outputs=code_preview,
-            )
-
-            # Update code preview when the LLM model changes
-            llm_model_dropdown.change(
-                fn=update_code_preview,
-                inputs=[],
-                outputs=code_preview,
             )
 
 # Run the interface
