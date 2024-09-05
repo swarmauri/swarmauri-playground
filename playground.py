@@ -90,14 +90,16 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
 
 # Define the function to update the code preview with the correct snippet
 def update_code_preview():
-    code_snippet = """
-from swarmauri.standard.llms.concrete.GroqModel import GroqModel as LLM
+    llm_model = llm_model_dropdown.value
+    if llm_model == "OpenAIModel":
+        code_snippet = f"""
+from swarmauri.standard.llms.concrete.OpenAIModel import OpenAIModel as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
 
 # model initialization
 API_KEY = os.getenv('GROQ_API_KEY')
-model = LLM(api_key=API_KEY, name='llama3-8b-8192')
+model = LLM(api_key=API_KEY, name='{llm_model}')
 conversation = Conversation()
 
 # user input
@@ -106,16 +108,45 @@ human_message = HumanMessage(content=input_data)
 conversation.add_message(human_message)
 
 # prediction key word arguments
-llm_kwargs = {
-    "temperature": 0.7,
-    "max_tokens": 512,
-}
+llm_kwargs = {{
+    "temperature": temperature_slider.value,
+    "max_tokens": max_tokens_slider.value,
+}}
 
 # prediction
 model.predict(conversation=conversation, **llm_kwargs)
 prediction = conversation.get_last().content
 print(prediction)
 """
+    else:
+        code_snippet = f"""
+
+from swarmauri.standard.llms.concrete.GroqModel import GroqModel as LLM
+from swarmauri.standard.conversations.concrete.Conversation import Conversation
+from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
+
+# model initialization
+API_KEY = os.getenv('OPENAI_API_KEY')
+model = LLM(api_key=API_KEY, name='{llm_model}')
+conversation = Conversation()
+
+# user input
+input_data = "Hi there!"
+human_message = HumanMessage(content=input_data)
+conversation.add_message(human_message)
+
+# prediction key word arguments
+llm_kwargs = {{
+    "temperature": temperature_slider.value,
+    "max_tokens": max_tokens_slider.value,
+}}
+
+# prediction
+model.predict(conversation=conversation, **llm_kwargs)
+prediction = conversation.get_last().content
+print(prediction)
+"""
+        
     return code_snippet
 
 
