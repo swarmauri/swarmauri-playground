@@ -34,9 +34,7 @@ llms = {
     ],
     "OpenAIModel": [
         model
-        for model in OpenAIModel(
-            api_key=available_llms["OpenAIModel"][1]
-        ).allowed_models
+        for model in OpenAIModel(api_key=available_llms["OpenAIModel"][1]).allowed_models
     ],
 }
 
@@ -50,22 +48,19 @@ DEFAULT_MODEL = llms["GroqModel"][0]
 TEMPERATURE = 0.7
 MAX_TOKENS = 512
 
-
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
-    if llms.get(component, None) is not None:
+    if component in llms:
         global CHOSEN_LLM
         global API_KEY
         CHOSEN_LLM = available_llms[component][0]
         API_KEY = available_llms[component][1]
-        return gr.update(choices=[model for model in llms[component]])
+        return gr.update(choices=llms[component])
     return gr.update(choices=[])
-
 
 # Define the callback function for the LLM model dropdown
 def llm_model_callback(model):
     return f"Agent created with {model}"
-
 
 # Function to handle conversation
 def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
@@ -87,47 +82,22 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     history.append((user_message, response))
     return history, "", history
 
-
 # Define the function to update the code preview with the correct snippet
 def update_code_preview():
     llm_component = llm_component_dropdown.value
     llm_model = llm_model_dropdown.value
-    if llm_component == "OpenAIModel":
-        code_snippet = f"""
-from swarmauri.standard.llms.concrete.OpenAIModel import OpenAIModel as LLM
+    api_key_mapping = {
+        "GroqModel": "GROQ_API_KEY",
+        "OpenAIModel": "OPENAI_API_KEY",
+    }
+    code_snippet = f"""
+from swarmauri.standard.llms.concrete.{llm_component} import {llm_component} as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
+import os
 
 # model initialization
-API_KEY = os.getenv('GROQ_API_KEY')
-model = LLM(api_key=API_KEY, name=llm_model)
-conversation = Conversation()
-
-# user input
-input_data = "Hello"
-human_message = HumanMessage(content=input_data)
-conversation.add_message(human_message)
-
-# prediction key word arguments
-llm_kwargs = {{
-    "temperature": temperature_slider.value,
-    "max_tokens": max_tokens_slider.value,
-}}
-
-# prediction
-model.predict(conversation=conversation, **llm_kwargs)
-prediction = conversation.get_last().content
-print(prediction)
-"""
-    else:
-        code_snippet = f"""
-
-from swarmauri.standard.llms.concrete.GroqModel import GroqModel as LLM
-from swarmauri.standard.conversations.concrete.Conversation import Conversation
-from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
-
-# model initialization
-API_KEY = os.getenv('OPENAI_API_KEY')
+API_KEY = os.getenv('{api_key_mapping.get(llm_component, None)}')
 model = LLM(api_key=API_KEY, name='{llm_model}')
 conversation = Conversation()
 
@@ -138,8 +108,8 @@ conversation.add_message(human_message)
 
 # prediction key word arguments
 llm_kwargs = {{
-    "temperature": temperature_slider.value,
-    "max_tokens": max_tokens_slider.value,
+    "temperature": {temperature_slider.value},
+    "max_tokens": {max_tokens_slider.value},
 }}
 
 # prediction
@@ -150,13 +120,12 @@ print(prediction)
         
     return code_snippet
 
-
 # Create the interface within a Blocks context
 with gr.Blocks() as interface:
     with gr.Row():
         with gr.Column(scale=1):
             llm_component_dropdown = gr.Dropdown(
-                choices=[model for model in available_llms.keys()],
+                choices=list(available_llms.keys()),
                 label="LLM Component",
                 value=DEFAULT_AI,
             )
@@ -178,17 +147,13 @@ with gr.Blocks() as interface:
                 minimum=1, maximum=2048, value=MAX_TOKENS, step=1, label="Max Tokens"
             )
 
+            output_text = gr.Textbox(label="Output")
+
             # Set up the event to update the model dropdown when LLM component changes
             llm_component_dropdown.change(
                 fn=llm_component_callback,
                 inputs=llm_component_dropdown,
                 outputs=llm_model_dropdown,
-            )
-
-            output_text = gr.Textbox(label="Output")
-
-            llm_model_dropdown.change(
-                fn=llm_model_callback, inputs=llm_model_dropdown, outputs=output_text
             )
 
         with gr.Column(scale=4):
@@ -216,6 +181,20 @@ with gr.Blocks() as interface:
                 language="python",
                 label="Code Preview",
                 value=update_code_preview(),
+            )
+
+            # Update code preview when the LLM component changes
+            llm_component_dropdown.change(
+                fn=update_code_preview,
+                inputs=[],
+                outputs=code_preview,
+            )
+
+            # Update code preview when the LLM model changes
+            llm_model_dropdown.change(
+                fn=update_code_preview,
+                inputs=[],
+                outputs=code_preview,
             )
 
 # Run the interface
