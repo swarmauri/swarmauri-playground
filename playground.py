@@ -53,8 +53,6 @@ MAX_TOKENS = 512
 # Store the generated code snippets globally
 code_snippet = ""
 new_code_snippet = ""
-temperature_code_snippet = ""
-max_token_code_snippet = ""
 
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
@@ -127,6 +125,19 @@ print(prediction)
 """
     return code_snippet
 
+# Define the function to update the model in the code preview
+def update_model_in_code_preview(model):
+    global new_code_snippet
+    new_code_snippet = code_snippet.replace(
+        f"name='{DEFAULT_MODEL}'",  # Replace the default model
+        f"name='{model}'"            # Replace with the new model
+    )
+    return new_code_snippet
+
+# Initialize current values for temperature and max_tokens
+current_temperature = TEMPERATURE
+current_max_tokens = MAX_TOKENS
+
 # Define the function to update both temperature and max_tokens in the code preview
 def update_code_with_temperature_and_tokens(temperature, max_tokens):
     global new_code_snippet
@@ -146,19 +157,6 @@ def update_code_with_temperature_and_tokens(temperature, max_tokens):
     current_max_tokens = max_tokens
 
     return updated_code_snippet
-
-# Initialize current values for temperature and max_tokens
-current_temperature = TEMPERATURE
-current_max_tokens = MAX_TOKENS
-
-# Define the function to update the model in the code preview
-def update_model_in_code_preview(model):
-    global new_code_snippet
-    new_code_snippet = code_snippet.replace(
-        f"name='{DEFAULT_MODEL}'",  # Replace the default model
-        f"name='{model}'"            # Replace with the new model
-    )
-    return new_code_snippet
 
 # Create the interface within a Blocks context
 with gr.Blocks() as interface:
