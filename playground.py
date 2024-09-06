@@ -53,6 +53,8 @@ MAX_TOKENS = 512
 # Store the generated code snippets globally
 code_snippet = ""
 new_code_snippet = ""
+temperature_code_snippet = ""
+max_token_code_snippet = ""
 
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
@@ -125,30 +127,36 @@ print(prediction)
 """
     return code_snippet
 
+# Define the function to update both temperature and max_tokens in the code preview
+def update_code_with_temperature_and_tokens(temperature, max_tokens):
+    global new_code_snippet
+    # Update both the temperature and max_tokens in the new_code_snippet
+    updated_code_snippet = new_code_snippet.replace(
+        f'"temperature": {TEMPERATURE}',
+        f'"temperature": {temperature}'
+    ).replace(
+        f'"max_tokens": {MAX_TOKENS}',
+        f'"max_tokens": {max_tokens}'
+    )
+    
+    # Update the global variables for the current temperature and max_tokens
+    global current_temperature
+    global current_max_tokens
+    current_temperature = temperature
+    current_max_tokens = max_tokens
+
+    return updated_code_snippet
+
+# Initialize current values for temperature and max_tokens
+current_temperature = TEMPERATURE
+current_max_tokens = MAX_TOKENS
+
 # Define the function to update the model in the code preview
 def update_model_in_code_preview(model):
     global new_code_snippet
     new_code_snippet = code_snippet.replace(
         f"name='{DEFAULT_MODEL}'",  # Replace the default model
         f"name='{model}'"            # Replace with the new model
-    )
-    return new_code_snippet
-
-# Define the function to update only the temperature part in the code preview
-def update_temperature_in_code_preview(temperature):
-    global new_code_snippet
-    new_code_snippet = new_code_snippet.replace(
-        f'"temperature": {TEMPERATURE}',
-        f'"temperature": {temperature}'
-    )
-    return new_code_snippet
-
-# Define the function to update only the max_tokens part in the code preview
-def update_max_tokens_in_code_preview(max_tokens):
-    global new_code_snippet
-    new_code_snippet = new_code_snippet.replace(
-        f'"max_tokens": {MAX_TOKENS}',
-        f'"max_tokens": {max_tokens}'
     )
     return new_code_snippet
 
@@ -232,16 +240,15 @@ with gr.Blocks() as interface:
                 outputs=code_preview,
             )
 
-            # Set up the event to update the temperature in the code preview
+            # Set up the event to update the temperature and max_tokens in the code preview
             temperature_slider.change(
-                fn=lambda temperature: update_temperature_in_code_preview(temperature),
+                fn=lambda temperature: update_code_with_temperature_and_tokens(temperature, current_max_tokens),
                 inputs=temperature_slider,
                 outputs=code_preview,
             )
 
-            # Set up the event to update the max_tokens in the code preview
             max_tokens_slider.change(
-                fn=lambda max_tokens: update_max_tokens_in_code_preview(max_tokens),
+                fn=lambda max_tokens: update_code_with_temperature_and_tokens(current_temperature, max_tokens),
                 inputs=max_tokens_slider,
                 outputs=code_preview,
             )
