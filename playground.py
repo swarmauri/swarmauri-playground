@@ -50,6 +50,8 @@ DEFAULT_MODEL = llms["GroqModel"][0]
 TEMPERATURE = 0.7
 MAX_TOKENS = 512
 
+# Store the generated code snippet globally
+code_snippet = ""
 
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
@@ -61,13 +63,13 @@ def llm_component_callback(component):
         return gr.update(choices=[model for model in llms[component]])
     return gr.update(choices=[])
 
-
 # Define the callback function for the LLM model dropdown
 def llm_model_callback(model):
+    global code_snippet
+    # Only update the model part of the code preview
     return f"Agent created with {model}"
 
-
-# Function to handle conversation
+# Define the function to handle conversation
 def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
     agent = SimpleConversationAgent(
         llm=CHOSEN_LLM(
@@ -87,13 +89,13 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     history.append((user_message, response))
     return history, "", history
 
-
-# Define the function to update the code preview with the correct snippet
+# Define the function to update the full code preview
 def update_code_preview(component, model):
     api_key_mapping = {
         "GroqModel": "GROQ_API_KEY",
         "OpenAIModel": "OPENAI_API_KEY",
     }
+    global code_snippet
     code_snippet = f"""
 from swarmauri.standard.llms.concrete.{component} import {component} as LLM
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
@@ -122,6 +124,15 @@ print(prediction)
 """
     return code_snippet
 
+# Define the function to update only the model in the code preview
+def update_model_in_code_preview(model):
+    global code_snippet
+    # Replace the model part of the code
+    new_code_snippet = code_snippet.replace(
+        f"name='{DEFAULT_MODEL}'",  # Replace the default model
+        f"name='{model}'"            # Replace with the new model
+    )
+    return new_code_snippet
 
 # Create the interface within a Blocks context
 with gr.Blocks() as interface:
@@ -198,7 +209,7 @@ with gr.Blocks() as interface:
             )
 
             llm_model_dropdown.change(
-                fn=lambda model: update_code_preview(llm_component_dropdown.value, model),
+                fn=lambda model: update_model_in_code_preview(model),
                 inputs=llm_model_dropdown,
                 outputs=code_preview,
             )
