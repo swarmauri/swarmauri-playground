@@ -253,5 +253,5 @@ with gr.Blocks() as interface:
 
 # Run the interface
 if __name__ == "__main__":
-    interface.title = "Swamuari Playground"
+    interface.title = "Swarmauri Playground"
     interface.launch()
