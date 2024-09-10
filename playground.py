@@ -15,7 +15,9 @@ import os
 import gradio as gr
 from swarmauri.standard.llms.concrete.GroqModel import GroqModel
 from swarmauri.standard.llms.concrete.OpenAIModel import OpenAIModel
-from swarmauri.standard.agents.concrete.SimpleConversationAgent import SimpleConversationAgent
+from swarmauri.standard.agents.concrete.SimpleConversationAgent import (
+    SimpleConversationAgent,
+)
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
 
 # Fetch the API keys from environment variables
@@ -54,6 +56,7 @@ MAX_TOKENS = 512
 code_snippet = ""
 new_code_snippet = ""
 
+
 # Define the callback function for the LLM component dropdown
 def llm_component_callback(component):
     if llms.get(component, None) is not None:
@@ -64,11 +67,13 @@ def llm_component_callback(component):
         return gr.update(choices=[model for model in llms[component]])
     return gr.update(choices=[])
 
+
 # Define the callback function for the LLM model dropdown
 def llm_model_callback(model):
     global new_code_snippet
     # Only update the model part of the code preview
     return f"Agent created with {model}"
+
 
 # Define the function to handle conversation
 def handle_conversation(llm_model, user_message, history, temperature, max_tokens):
@@ -89,6 +94,7 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
     )
     history.append((user_message, response))
     return history, "", history
+
 
 # Define the function to generate the full code preview
 def update_code_preview(component, model):
@@ -118,6 +124,9 @@ llm_kwargs = {{
     "max_tokens": 512,
 }}
 
+# messages
+messages = {[f'HumanMessage(content={message.content})' if message.type=='HumanMessage' else f'HumanMessage(content={message.content})' for message in conversation.history]}
+
 # prediction
 model.predict(conversation=conversation, **llm_kwargs)
 prediction = conversation.get_last().content
@@ -125,31 +134,30 @@ print(prediction)
 """
     return code_snippet
 
+
 # Define the function to update the model in the code preview
 def update_model_in_code_preview(model):
     global new_code_snippet
     new_code_snippet = code_snippet.replace(
         f"name='{DEFAULT_MODEL}'",  # Replace the default model
-        f"name='{model}'"            # Replace with the new model
+        f"name='{model}'",  # Replace with the new model
     )
     return new_code_snippet
+
 
 # Initialize current values for temperature and max_tokens
 current_temperature = TEMPERATURE
 current_max_tokens = MAX_TOKENS
+
 
 # Define the function to update both temperature and max_tokens in the code preview
 def update_code_with_temperature_and_tokens(temperature, max_tokens):
     global new_code_snippet
     # Update both the temperature and max_tokens in the new_code_snippet
     updated_code_snippet = new_code_snippet.replace(
-        f'"temperature": {TEMPERATURE}',
-        f'"temperature": {temperature}'
-    ).replace(
-        f'"max_tokens": {MAX_TOKENS}',
-        f'"max_tokens": {max_tokens}'
-    )
-    
+        f'"temperature": {TEMPERATURE}', f'"temperature": {temperature}'
+    ).replace(f'"max_tokens": {MAX_TOKENS}', f'"max_tokens": {max_tokens}')
+
     # Update the global variables for the current temperature and max_tokens
     global current_temperature
     global current_max_tokens
@@ -157,6 +165,9 @@ def update_code_with_temperature_and_tokens(temperature, max_tokens):
     current_max_tokens = max_tokens
 
     return updated_code_snippet
+
+
+code_preview = None
 
 # Create the interface within a Blocks context
 with gr.Blocks() as interface:
@@ -198,6 +209,7 @@ with gr.Blocks() as interface:
                 fn=llm_model_callback, inputs=llm_model_dropdown, outputs=output_text
             )
 
+        # Chat interface
         with gr.Column(scale=4):
             chat_interface = gr.Chatbot(label="Conversation History", container=False)
 
@@ -217,7 +229,7 @@ with gr.Blocks() as interface:
                 scroll_to_output=True,  # This will scroll the chat interface to the bottom
             )
 
-        # Add a column for the code preview block
+        # Add a column for the code preview block without changing the order
         with gr.Column(scale=3):
             code_preview = gr.Code(
                 language="python",
@@ -227,7 +239,9 @@ with gr.Blocks() as interface:
 
             # Set up the event to update the code preview when LLM component or model changes
             llm_component_dropdown.change(
-                fn=lambda component: update_code_preview(component, llm_model_dropdown.value),
+                fn=lambda component: update_code_preview(
+                    component, llm_model_dropdown.value
+                ),
                 inputs=llm_component_dropdown,
                 outputs=code_preview,
             )
@@ -240,14 +254,27 @@ with gr.Blocks() as interface:
 
             # Set up the event to update the temperature and max_tokens in the code preview
             temperature_slider.change(
-                fn=lambda temperature: update_code_with_temperature_and_tokens(temperature, current_max_tokens),
+                fn=lambda temperature: update_code_with_temperature_and_tokens(
+                    temperature, current_max_tokens
+                ),
                 inputs=temperature_slider,
                 outputs=code_preview,
             )
 
             max_tokens_slider.change(
-                fn=lambda max_tokens: update_code_with_temperature_and_tokens(current_temperature, max_tokens),
+                fn=lambda max_tokens: update_code_with_temperature_and_tokens(
+                    current_temperature, max_tokens
+                ),
                 inputs=max_tokens_slider,
+                outputs=code_preview,
+            )
+
+            # New event for user_input submission
+            user_input.submit(
+                fn=lambda: update_code_preview(
+                    llm_component_dropdown.value, llm_model_dropdown.value
+                ),
+                inputs=[],  # No inputs here, using the dropdown values directly
                 outputs=code_preview,
             )
 
