@@ -19,6 +19,7 @@ from swarmauri.standard.agents.concrete.SimpleConversationAgent import (
     SimpleConversationAgent,
 )
 from swarmauri.standard.conversations.concrete.Conversation import Conversation
+from swarmauri.standard.messages.concrete.HumanMessage import HumanMessage
 
 # Fetch the API keys from environment variables
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -92,6 +93,8 @@ def handle_conversation(llm_model, user_message, history, temperature, max_token
         user_message,
         llm_kwargs=llm_kwargs,
     )
+    conversation.add_message(HumanMessage(content=user_message))
+    conversation.add_message(HumanMessage(content=response))
     history.append((user_message, response))
     return history, "", history
 
